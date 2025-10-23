@@ -7,8 +7,10 @@ type GameResult = 'win' | 'lose' | 'draw' | null;
 
 interface Player {
   id: string;
+  name: string;
   choice: GameChoice;
   isReady: boolean;
+  hasChosen: boolean;
 }
 
 interface RoomData {
@@ -21,6 +23,7 @@ interface RoomData {
 export default function Home() {
   const [roomId, setRoomId] = useState<string>('');
   const [playerId] = useState<string>(() => Math.random().toString(36).substring(2, 15));
+  const [playerName, setPlayerName] = useState<string>('');
   const [playerChoice, setPlayerChoice] = useState<GameChoice>(null);
   const [opponentChoice, setOpponentChoice] = useState<GameChoice>(null);
   const [gameResult, setGameResult] = useState<GameResult>(null);
@@ -28,6 +31,7 @@ export default function Home() {
   const [roomData, setRoomData] = useState<RoomData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [opponentHasChosen, setOpponentHasChosen] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -46,7 +50,8 @@ export default function Home() {
           type: 'join-room',
           data: {
             roomId,
-            playerId
+            playerId,
+            playerName: playerName || `플레이어${playerId.substring(0, 4)}`
           }
         }));
       };
@@ -84,13 +89,22 @@ export default function Home() {
         setRoomData(data);
         if (data.players.length === 2) {
           setWaitingForOpponent(false);
+          // 상대방 선택 상태 업데이트
+          const opponent = data.players.find((p: Player) => p.id !== playerId);
+          if (opponent) {
+            setOpponentHasChosen(opponent.hasChosen);
+          }
         } else {
           setWaitingForOpponent(true);
+          setOpponentHasChosen(false);
         }
         break;
       
       case 'player-chose':
         // 상대방이 선택했지만 아직 결과는 모름
+        if (data.playerId !== playerId) {
+          setOpponentHasChosen(true);
+        }
         break;
       
       case 'game-result':
@@ -105,6 +119,7 @@ export default function Home() {
         setPlayerChoice(null);
         setOpponentChoice(null);
         setGameResult(null);
+        setOpponentHasChosen(false);
         break;
       
       case 'player-disconnected':
@@ -125,7 +140,7 @@ export default function Home() {
 
   // 방 입장
   const joinRoom = () => {
-    if (roomId.trim()) {
+    if (roomId.trim() && playerName.trim()) {
       setIsInRoom(true);
       setWaitingForOpponent(true);
     }
@@ -172,6 +187,8 @@ export default function Home() {
     setRoomData(null);
     setWaitingForOpponent(false);
     setIsConnected(false);
+    setOpponentHasChosen(false);
+    setPlayerName('');
   };
 
   return (
@@ -184,6 +201,18 @@ export default function Home() {
         {!isInRoom ? (
           // 방 생성/입장 화면
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                플레이어 이름
+              </label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="이름을 입력하세요"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 방 ID
@@ -206,7 +235,7 @@ export default function Home() {
             </div>
             <button
               onClick={joinRoom}
-              disabled={!roomId.trim()}
+              disabled={!roomId.trim() || !playerName.trim()}
               className="w-full py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               방 입장
@@ -217,7 +246,12 @@ export default function Home() {
           <div className="space-y-6">
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-700">방 ID: {roomId}</p>
-              <p className="text-sm text-gray-500">플레이어 ID: {playerId}</p>
+              <p className="text-sm text-gray-500">나: {playerName || `플레이어${playerId.substring(0, 4)}`}</p>
+              {roomData && roomData.players.length === 2 && (
+                <p className="text-sm text-gray-500">
+                  상대방: {roomData.players.find(p => p.id !== playerId)?.name || '알 수 없음'}
+                </p>
+              )}
               <div className="flex items-center justify-center gap-2 mt-2">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 <span className="text-xs text-gray-600">
@@ -247,6 +281,14 @@ export default function Home() {
               // 선택 화면
               <div>
                 <h2 className="text-xl font-semibold text-center mb-4">가위바위보를 선택하세요!</h2>
+                {opponentHasChosen && (
+                  <div className="text-center mb-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      상대방이 선택했습니다!
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-center gap-4">
                   <button
                     onClick={() => makeChoice('rock')}
@@ -273,7 +315,7 @@ export default function Home() {
               <div className="text-center space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">나</p>
+                    <p className="text-sm text-gray-600 mb-2">{playerName || `플레이어${playerId.substring(0, 4)}`}</p>
                     <div className="text-4xl">
                       {playerChoice === 'rock' && '✊'}
                       {playerChoice === 'paper' && '✋'}
@@ -282,7 +324,9 @@ export default function Home() {
                   </div>
                   <div className="text-2xl">VS</div>
                   <div className="text-center">
-                    <p className="text-sm text-gray-600 mb-2">상대방</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {roomData?.players.find(p => p.id !== playerId)?.name || '상대방'}
+                    </p>
                     <div className="text-4xl">
                       {opponentChoice ? (
                         <>

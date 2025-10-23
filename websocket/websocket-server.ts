@@ -3,9 +3,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 // 방과 플레이어 정보를 저장하는 타입
 interface Player {
   id: string;
+  name: string;
   ws: WebSocket;
   choice: 'rock' | 'paper' | 'scissors' | null;
   isReady: boolean;
+  hasChosen: boolean;
 }
 
 interface Room {
@@ -23,6 +25,7 @@ interface WebSocketMessage {
 interface JoinRoomData {
   roomId: string;
   playerId: string;
+  playerName: string;
 }
 
 interface MakeChoiceData {
@@ -41,6 +44,7 @@ interface GameResult {
 
 interface PlayerChoice {
   playerId: string;
+  playerName: string;
   choice: 'rock' | 'paper' | 'scissors';
 }
 
@@ -89,7 +93,7 @@ function handleMessage(ws: WebSocket, message: WebSocketMessage): void {
 }
 
 function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
-  const { roomId, playerId } = data;
+  const { roomId, playerId, playerName } = data;
   
   if (!rooms.has(roomId)) {
     // 새 방 생성
@@ -111,7 +115,8 @@ function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
     // 기존 플레이어 재연결
     existingPlayer.ws = ws;
     existingPlayer.isReady = true;
-    console.log(`플레이어 재연결: ${playerId} in ${roomId}`);
+    existingPlayer.name = playerName; // 이름 업데이트
+    console.log(`플레이어 재연결: ${playerName} (${playerId}) in ${roomId}`);
   } else {
     // 새 플레이어 추가
     if (room.players.length >= 2) {
@@ -124,13 +129,15 @@ function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
 
     const newPlayer: Player = {
       id: playerId,
+      name: playerName,
       ws: ws,
       choice: null,
-      isReady: true
+      isReady: true,
+      hasChosen: false
     };
     
     room.players.push(newPlayer);
-    console.log(`새 플레이어 입장: ${playerId} in ${roomId}`);
+    console.log(`새 플레이어 입장: ${playerName} (${playerId}) in ${roomId}`);
   }
 
   // 방 상태 업데이트
@@ -146,8 +153,10 @@ function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
       roomId,
       players: room.players.map(p => ({
         id: p.id,
+        name: p.name,
         choice: p.choice,
-        isReady: p.isReady
+        isReady: p.isReady,
+        hasChosen: p.hasChosen
       })),
       gameState: room.gameState,
       currentRound: room.currentRound
@@ -165,7 +174,8 @@ function handleMakeChoice(ws: WebSocket, data: MakeChoiceData): void {
   if (!player) return;
 
   player.choice = choice;
-  console.log(`플레이어 선택: ${playerId} chose ${choice} in ${roomId}`);
+  player.hasChosen = true;
+  console.log(`플레이어 선택: ${player.name} (${playerId}) chose ${choice} in ${roomId}`);
 
   // 모든 플레이어가 선택했는지 확인
   const allPlayersChose = room.players.every(p => p.choice !== null);
@@ -182,6 +192,7 @@ function handleMakeChoice(ws: WebSocket, data: MakeChoiceData): void {
         results,
         choices: room.players.map(p => ({
           playerId: p.id,
+          playerName: p.name,
           choice: p.choice
         })) as PlayerChoice[]
       }
@@ -194,6 +205,7 @@ function handleMakeChoice(ws: WebSocket, data: MakeChoiceData): void {
       type: 'player-chose',
       data: {
         playerId,
+        playerName: player.name,
         choice: null // 선택을 숨김
       }
     });
@@ -209,6 +221,7 @@ function handleResetGame(ws: WebSocket, data: ResetGameData): void {
   // 모든 플레이어의 선택 초기화
   room.players.forEach(player => {
     player.choice = null;
+    player.hasChosen = false;
   });
 
   room.gameState = 'playing';
