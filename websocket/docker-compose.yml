@@ -1,0 +1,32 @@
+services:
+  # Next.js 웹 애플리케이션
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.nextjs
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080
+    depends_on:
+      - websocket
+    networks:
+      - app-network
+
+  # WebSocket 서버
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
