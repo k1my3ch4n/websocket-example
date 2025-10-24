@@ -65,7 +65,8 @@ export default function GamePage() {
   // WebSocket 연결
   useEffect(() => {
     if (isInRoom && !wsRef.current && roomId && playerName) {
-      const ws = new WebSocket('ws://localhost:8080');
+      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8080';
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {

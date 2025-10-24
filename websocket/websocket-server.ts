@@ -62,9 +62,10 @@ interface PlayerChoice {
 const rooms = new Map<string, Room>();
 
 // WebSocket 서버 시작
-const wss = new WebSocketServer({ port: 8080 });
+const PORT = process.env.PORT || 8080;
+const wss = new WebSocketServer({ port: Number(PORT) });
 
-console.log('WebSocket 서버가 포트 8080에서 시작되었습니다.');
+console.log(`WebSocket 서버가 포트 ${PORT}에서 시작되었습니다.`);
 
 wss.on('connection', (ws: WebSocket, req) => {
   console.log('새로운 클라이언트 연결');
