@@ -41,14 +41,24 @@ export default function GamePage() {
   const [opponentHasChosen, setOpponentHasChosen] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [showNameInput, setShowNameInput] = useState(true);
+  const [showCopyMessage, setShowCopyMessage] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
 
-  // URL 파라미터 검증
+  // URL 파라미터 검증 및 닉네임 불러오기
   useEffect(() => {
     if (!roomId) {
       router.push('/');
+      return;
+    }
+    
+    // localStorage에서 닉네임 불러오기
+    const savedName = localStorage.getItem('playerName');
+    if (savedName) {
+      setPlayerName(savedName);
+    } else {
+      // 닉네임이 없으면 메인 페이지로 리다이렉트 (방 ID 포함)
+      router.push(`/?roomId=${roomId}`);
     }
   }, [roomId, router]);
 
@@ -159,14 +169,13 @@ export default function GamePage() {
     }
   };
 
-  // 이름 입력 완료
-  const handleNameSubmit = () => {
-    if (playerName.trim()) {
-      setShowNameInput(false);
+  // 자동으로 방 입장
+  useEffect(() => {
+    if (playerName && roomId && !isInRoom) {
       setIsInRoom(true);
       setWaitingForOpponent(true);
     }
-  };
+  }, [playerName, roomId, isInRoom]);
 
   // 게임 시작
   const startGame = () => {
@@ -208,6 +217,27 @@ export default function GamePage() {
     }));
   };
 
+  // 방 링크 복사
+  const copyRoomLink = async () => {
+    const roomLink = `${window.location.origin}/game?roomId=${roomId}`;
+    try {
+      await navigator.clipboard.writeText(roomLink);
+      setShowCopyMessage(true);
+      setTimeout(() => setShowCopyMessage(false), 2000);
+    } catch (err) {
+      console.error('복사 실패:', err);
+      // fallback: 텍스트 선택
+      const textArea = document.createElement('textarea');
+      textArea.value = roomLink;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setShowCopyMessage(true);
+      setTimeout(() => setShowCopyMessage(false), 2000);
+    }
+  };
+
   // 방 나가기
   const leaveRoom = () => {
     if (wsRef.current) {
@@ -236,50 +266,21 @@ export default function GamePage() {
           가위바위보 게임
         </h1>
 
-        {/* 이름 입력 화면 */}
-        {showNameInput ? (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                플레이어 이름을 입력하세요
-              </h2>
-              <p className="text-sm text-gray-500 mb-6">방 ID: {roomId}</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                플레이어 이름
-              </label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="이름을 입력하세요"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleNameSubmit()}
-              />
-            </div>
-            
-            <button
-              onClick={handleNameSubmit}
-              disabled={!playerName.trim()}
-              className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              방 입장하기
-            </button>
-            
-            <button
-              onClick={() => router.push('/')}
-              className="w-full py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
-            >
-              메인 페이지로 돌아가기
-            </button>
-          </div>
-        ) : (
-          /* 게임 화면 */
+        {/* 게임 화면 */}
           <div className="space-y-6">
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-700">방 ID: {roomId}</p>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <button
+                  onClick={copyRoomLink}
+                  className="text-blue-500 hover:text-blue-700 text-sm font-medium underline"
+                >
+                  방 링크 복사
+                </button>
+                {showCopyMessage && (
+                  <span className="text-green-600 text-xs">복사됨!</span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">나: {playerName}</p>
               {roomData && roomData.players.length === 2 && (
                 <p className="text-sm text-gray-500">
@@ -422,7 +423,6 @@ export default function GamePage() {
               </div>
             )}
           </div>
-        )}
       </div>
     </div>
   );

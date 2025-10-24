@@ -222,12 +222,18 @@ function handleMakeChoice(ws: WebSocket, data: MakeChoiceData): void {
 function handleStartGame(ws: WebSocket, data: StartGameData): void {
   const { roomId } = data;
   
+  console.log(`게임 시작 요청: ${roomId}`);
+  
   const room = rooms.get(roomId);
-  if (!room) return;
+  if (!room) {
+    console.log(`방을 찾을 수 없음: ${roomId}`);
+    return;
+  }
 
   // 방장인지 확인
   const player = room.players.find(p => p.ws === ws);
   if (!player || !player.isHost) {
+    console.log(`방장 권한 없음: ${player?.name || 'unknown'}`);
     ws.send(JSON.stringify({
       type: 'error',
       data: { message: '방장만 게임을 시작할 수 있습니다.' }
@@ -237,6 +243,7 @@ function handleStartGame(ws: WebSocket, data: StartGameData): void {
 
   // 플레이어가 2명인지 확인
   if (room.players.length !== 2) {
+    console.log(`플레이어 수 부족: ${room.players.length}/2`);
     ws.send(JSON.stringify({
       type: 'error',
       data: { message: '플레이어가 2명이어야 게임을 시작할 수 있습니다.' }
@@ -245,7 +252,7 @@ function handleStartGame(ws: WebSocket, data: StartGameData): void {
   }
 
   room.gameState = 'playing';
-  console.log(`게임 시작: ${roomId} by ${player.name}`);
+  console.log(`게임 시작 성공: ${roomId} by ${player.name}`);
 
   // 모든 플레이어에게 게임 시작 알림
   broadcastToRoom(roomId, {

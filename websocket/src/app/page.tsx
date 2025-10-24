@@ -1,11 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [roomId, setRoomId] = useState<string>('');
   const [playerName, setPlayerName] = useState<string>('');
+
+  // 컴포넌트 마운트 시 저장된 닉네임과 URL 파라미터 불러오기
+  useEffect(() => {
+    const savedName = localStorage.getItem('playerName');
+    if (savedName) {
+      setPlayerName(savedName);
+    }
+    
+    // URL에서 방 ID 파라미터 확인
+    const urlRoomId = searchParams.get('roomId');
+    if (urlRoomId) {
+      setRoomId(urlRoomId);
+    }
+  }, [searchParams]);
 
   // 랜덤한 방 ID 생성
   const generateRoomId = () => {
@@ -40,28 +56,34 @@ export default function Home() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               플레이어 이름
             </label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="이름을 입력하세요"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => {
+                  setPlayerName(e.target.value);
+                  localStorage.setItem('playerName', e.target.value);
+                }}
+                placeholder="이름을 입력하세요"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-black placeholder-gray-400"
+              />
           </div>
 
           {/* 방 ID 입력 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               방 ID
+              {searchParams.get('roomId') && (
+                <span className="text-green-600 text-xs ml-2">(링크에서 자동 입력됨)</span>
+              )}
             </label>
             <div className="flex gap-3">
-              <input
-                type="text"
-                value={roomId}
-                onChange={(e) => setRoomId(e.target.value.toUpperCase())}
-                placeholder="방 ID 입력"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                  placeholder="방 ID 입력"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-black placeholder-gray-400"
+                />
               <button
                 onClick={generateRoomId}
                 className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
