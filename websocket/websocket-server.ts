@@ -8,6 +8,7 @@ interface Player {
   choice: 'rock' | 'paper' | 'scissors' | null;
   isReady: boolean;
   hasChosen: boolean;
+  isHost: boolean;
 }
 
 interface Room {
@@ -18,7 +19,7 @@ interface Room {
 }
 
 interface WebSocketMessage {
-  type: 'join-room' | 'make-choice' | 'reset-game';
+  type: 'join-room' | 'make-choice' | 'reset-game' | 'start-game';
   data: any;
 }
 
@@ -35,6 +36,10 @@ interface MakeChoiceData {
 }
 
 interface ResetGameData {
+  roomId: string;
+}
+
+interface StartGameData {
   roomId: string;
 }
 
@@ -87,6 +92,9 @@ function handleMessage(ws: WebSocket, message: WebSocketMessage): void {
     case 'reset-game':
       handleResetGame(ws, data as ResetGameData);
       break;
+    case 'start-game':
+      handleStartGame(ws, data as StartGameData);
+      break;
     default:
       console.log('알 수 없는 메시지 타입:', type);
   }
@@ -133,18 +141,16 @@ function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
       ws: ws,
       choice: null,
       isReady: true,
-      hasChosen: false
+      hasChosen: false,
+      isHost: room.players.length === 0 // 첫 번째 플레이어가 방장
     };
     
     room.players.push(newPlayer);
     console.log(`새 플레이어 입장: ${playerName} (${playerId}) in ${roomId}`);
   }
 
-  // 방 상태 업데이트
-  if (room.players.length === 2) {
-    room.gameState = 'playing';
-    console.log(`게임 시작: ${roomId}`);
-  }
+  // 방 상태 업데이트 (게임은 방장이 시작해야 함)
+  console.log(`플레이어 입장 완료: ${roomId}, 현재 플레이어 수: ${room.players.length}`);
 
   // 모든 플레이어에게 방 상태 전송
   broadcastToRoom(roomId, {
@@ -156,7 +162,8 @@ function handleJoinRoom(ws: WebSocket, data: JoinRoomData): void {
         name: p.name,
         choice: p.choice,
         isReady: p.isReady,
-        hasChosen: p.hasChosen
+        hasChosen: p.hasChosen,
+        isHost: p.isHost
       })),
       gameState: room.gameState,
       currentRound: room.currentRound
@@ -212,6 +219,44 @@ function handleMakeChoice(ws: WebSocket, data: MakeChoiceData): void {
   }
 }
 
+function handleStartGame(ws: WebSocket, data: StartGameData): void {
+  const { roomId } = data;
+  
+  const room = rooms.get(roomId);
+  if (!room) return;
+
+  // 방장인지 확인
+  const player = room.players.find(p => p.ws === ws);
+  if (!player || !player.isHost) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: { message: '방장만 게임을 시작할 수 있습니다.' }
+    }));
+    return;
+  }
+
+  // 플레이어가 2명인지 확인
+  if (room.players.length !== 2) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      data: { message: '플레이어가 2명이어야 게임을 시작할 수 있습니다.' }
+    }));
+    return;
+  }
+
+  room.gameState = 'playing';
+  console.log(`게임 시작: ${roomId} by ${player.name}`);
+
+  // 모든 플레이어에게 게임 시작 알림
+  broadcastToRoom(roomId, {
+    type: 'game-started',
+    data: {
+      roomId,
+      startedBy: player.name
+    }
+  });
+}
+
 function handleResetGame(ws: WebSocket, data: ResetGameData): void {
   const { roomId } = data;
   
@@ -224,7 +269,7 @@ function handleResetGame(ws: WebSocket, data: ResetGameData): void {
     player.hasChosen = false;
   });
 
-  room.gameState = 'playing';
+  room.gameState = 'waiting'; // 게임 리셋 시 대기 상태로
   room.currentRound += 1;
 
   console.log(`게임 리셋: ${roomId}, 라운드 ${room.currentRound}`);
