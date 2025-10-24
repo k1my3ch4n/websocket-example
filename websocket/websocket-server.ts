@@ -19,7 +19,7 @@ interface Room {
 }
 
 interface WebSocketMessage {
-  type: 'join-room' | 'make-choice' | 'reset-game' | 'start-game';
+  type: 'join-room' | 'make-choice' | 'reset-game' | 'start-game' | 'leave-room';
   data: any;
 }
 
@@ -41,6 +41,11 @@ interface ResetGameData {
 
 interface StartGameData {
   roomId: string;
+}
+
+interface LeaveRoomData {
+  roomId: string;
+  playerId: string;
 }
 
 interface GameResult {
@@ -94,6 +99,9 @@ function handleMessage(ws: WebSocket, message: WebSocketMessage): void {
       break;
     case 'start-game':
       handleStartGame(ws, data as StartGameData);
+      break;
+    case 'leave-room':
+      handleLeaveRoom(ws, data as LeaveRoomData);
       break;
     default:
       console.log('알 수 없는 메시지 타입:', type);
@@ -289,6 +297,81 @@ function handleResetGame(ws: WebSocket, data: ResetGameData): void {
       currentRound: room.currentRound
     }
   });
+}
+
+function handleLeaveRoom(ws: WebSocket, data: LeaveRoomData): void {
+  const { roomId, playerId } = data;
+  
+  console.log(`플레이어 방 나가기 요청: ${playerId} from ${roomId}`);
+  
+  const room = rooms.get(roomId);
+  if (!room) {
+    console.log(`방을 찾을 수 없음: ${roomId}`);
+    return;
+  }
+
+  const player = room.players.find(p => p.id === playerId);
+  if (!player) {
+    console.log(`플레이어를 찾을 수 없음: ${playerId}`);
+    return;
+  }
+
+  // 플레이어를 방에서 제거
+  room.players = room.players.filter(p => p.id !== playerId);
+  console.log(`플레이어 제거: ${player.name} (${playerId}) from ${roomId}`);
+
+  // 다른 플레이어들에게 플레이어 나감 알림
+  broadcastToRoom(roomId, {
+    type: 'player-left',
+    data: {
+      playerId,
+      playerName: player.name,
+      remainingPlayers: room.players.length,
+      updatedRoomData: {
+        roomId,
+        players: room.players.map(p => ({
+          id: p.id,
+          name: p.name,
+          choice: p.choice,
+          isReady: p.isReady,
+          hasChosen: p.hasChosen,
+          isHost: p.isHost
+        })),
+        gameState: room.gameState,
+        currentRound: room.currentRound
+      }
+    }
+  });
+
+  // 방에 플레이어가 없으면 방 삭제
+  if (room.players.length === 0) {
+    rooms.delete(roomId);
+    console.log(`빈 방 삭제: ${roomId}`);
+  } else {
+    // 방장이 나간 경우 새로운 방장 지정 (첫 번째 플레이어)
+    if (player.isHost && room.players.length > 0) {
+      room.players[0].isHost = true;
+      console.log(`새 방장 지정: ${room.players[0].name} (${room.players[0].id})`);
+      
+      // 새로운 방장 정보를 모든 플레이어에게 전송
+      broadcastToRoom(roomId, {
+        type: 'room-updated',
+        data: {
+          roomId,
+          players: room.players.map(p => ({
+            id: p.id,
+            name: p.name,
+            choice: p.choice,
+            isReady: p.isReady,
+            hasChosen: p.hasChosen,
+            isHost: p.isHost
+          })),
+          gameState: room.gameState,
+          currentRound: room.currentRound
+        }
+      });
+    }
+  }
 }
 
 function handleDisconnect(ws: WebSocket): void {

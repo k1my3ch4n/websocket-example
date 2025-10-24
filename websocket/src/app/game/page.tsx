@@ -114,9 +114,9 @@ export default function GamePage() {
     switch (type) {
       case 'room-updated':
         setRoomData(data);
-        // 첫 번째 플레이어가 방장
-        const isFirstPlayer = data.players.findIndex((p: Player) => p.id === playerId) === 0;
-        setIsHost(isFirstPlayer);
+        // 현재 플레이어가 방장인지 확인
+        const currentPlayer = data.players.find((p: Player) => p.id === playerId);
+        setIsHost(currentPlayer ? currentPlayer.isHost : false);
         
         if (data.players.length === 2) {
           setWaitingForOpponent(false);
@@ -161,6 +161,20 @@ export default function GamePage() {
       case 'player-disconnected':
         setWaitingForOpponent(true);
         setGameStarted(false);
+        break;
+      
+      case 'player-left':
+        setWaitingForOpponent(true);
+        setGameStarted(false);
+        // 서버에서 보낸 업데이트된 방 정보 사용
+        if (data.updatedRoomData) {
+          setRoomData(data.updatedRoomData);
+          // 현재 플레이어가 방장인지 확인
+          const currentPlayer = data.updatedRoomData.players.find((p: Player) => p.id === playerId);
+          setIsHost(currentPlayer ? currentPlayer.isHost : false);
+        }
+        // 상대방이 나갔다는 알림 표시
+        alert(`${data.playerName}님이 방을 나갔습니다.`);
         break;
       
       case 'error':
@@ -240,7 +254,20 @@ export default function GamePage() {
 
   // 방 나가기
   const leaveRoom = () => {
-    if (wsRef.current) {
+    if (wsRef.current && isConnected) {
+      // 서버에 방 나가기 알림 전송
+      wsRef.current.send(JSON.stringify({
+        type: 'leave-room',
+        data: {
+          roomId,
+          playerId
+        }
+      }));
+      // 잠시 대기 후 연결 종료
+      setTimeout(() => {
+        wsRef.current?.close();
+      }, 100);
+    } else if (wsRef.current) {
       wsRef.current.close();
     }
     router.push('/');
