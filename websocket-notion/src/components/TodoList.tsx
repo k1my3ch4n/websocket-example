@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Todo } from "@/types/todo";
+import { Todo, TodoStatus } from "@/types/todo";
 import TodoItem from "./TodoItem";
+
+const COLUMNS: { status: TodoStatus; title: string; color: string }[] = [
+  { status: "pending", title: "대기 중", color: "bg-neutral-500" },
+  { status: "in_progress", title: "진행 중", color: "bg-blue-500" },
+  { status: "completed", title: "완료", color: "bg-green-500" },
+];
 
 export default function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -14,20 +20,12 @@ export default function TodoList() {
     const newTodo: Todo = {
       id: crypto.randomUUID(),
       text: newTodoText.trim(),
-      completed: false,
+      status: "pending",
       createdAt: new Date(),
     };
 
     setTodos([...todos, newTodo]);
     setNewTodoText("");
-  };
-
-  const toggleTodo = (id: string) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
   };
 
   const deleteTodo = (id: string) => {
@@ -38,68 +36,68 @@ export default function TodoList() {
     setTodos(todos.map((todo) => (todo.id === id ? { ...todo, text } : todo)));
   };
 
-  const completedCount = todos.filter((t) => t.completed).length;
+  const changeStatus = (id: string, status: TodoStatus) => {
+    setTodos(
+      todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
+    );
+  };
+
+  const getTodosByStatus = (status: TodoStatus) =>
+    todos.filter((todo) => todo.status === status);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-neutral-800 dark:text-white mb-2">
-          Todo List
+        <h1 className="text-3xl font-bold text-neutral-800 dark:text-white mb-4">
+          Todo Board
         </h1>
-        {todos.length > 0 && (
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            {completedCount} / {todos.length} completed
-          </p>
-        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newTodoText}
+            onChange={(e) => setNewTodoText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addTodo()}
+            placeholder="새 작업 추가..."
+            className="flex-1 px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-800 dark:text-white placeholder-neutral-400"
+          />
+          <button
+            onClick={addTodo}
+            disabled={!newTodoText.trim()}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            추가
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        <input
-          type="text"
-          value={newTodoText}
-          onChange={(e) => setNewTodoText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addTodo()}
-          placeholder="Add a new task..."
-          className="flex-1 px-4 py-3 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-800 dark:text-white placeholder-neutral-400"
-        />
-        <button
-          onClick={addTodo}
-          disabled={!newTodoText.trim()}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          Add
-        </button>
-      </div>
-
-      <div className="space-y-2">
-        {todos.length === 0 ? (
-          <div className="text-center py-12 text-neutral-400 dark:text-neutral-500">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 opacity-50"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            <p>No tasks yet. Add one above!</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {COLUMNS.map((column) => (
+          <div
+            key={column.status}
+            className="bg-neutral-100 dark:bg-neutral-800/50 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className={`w-3 h-3 rounded-full ${column.color}`} />
+              <h2 className="font-semibold text-neutral-700 dark:text-neutral-200">
+                {column.title}
+              </h2>
+              <span className="ml-auto text-sm text-neutral-500 dark:text-neutral-400">
+                {getTodosByStatus(column.status).length}
+              </span>
+            </div>
+            <div className="space-y-2 min-h-[200px]">
+              {getTodosByStatus(column.status).map((todo) => (
+                <TodoItem
+                  key={todo.id}
+                  todo={todo}
+                  onDelete={deleteTodo}
+                  onEdit={editTodo}
+                  onStatusChange={changeStatus}
+                />
+              ))}
+            </div>
           </div>
-        ) : (
-          todos.map((todo) => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
-              onToggle={toggleTodo}
-              onDelete={deleteTodo}
-              onEdit={editTodo}
-            />
-          ))
-        )}
+        ))}
       </div>
     </div>
   );
