@@ -1,34 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Todo } from "@/types/todo";
 import TodoItem from "./TodoItem";
 
-function getInitialTodos(): Todo[] {
-  if (typeof window === "undefined") return [];
-  const saved = localStorage.getItem("todos");
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    return parsed.map((todo: Todo) => ({
-      ...todo,
-      createdAt: new Date(todo.createdAt),
-    }));
-  }
-  return [];
-}
-
 export default function TodoList() {
-  const [todos, setTodos] = useState<Todo[]>(getInitialTodos);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodoText, setNewTodoText] = useState("");
-  const isInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!isInitialized.current) {
-      isInitialized.current = true;
-      return;
-    }
-    localStorage.setItem("todos", JSON.stringify(todos));
-  }, [todos]);
 
   const addTodo = () => {
     if (!newTodoText.trim()) return;
