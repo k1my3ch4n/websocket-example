@@ -1,33 +1,50 @@
 "use client";
 
-import { Todo } from "@/types/todo";
+import { Todo, TodoStatus } from "@/types/todo";
 
 interface TodoItemProps {
   todo: Todo;
-  onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, text: string) => void;
+  onStatusChange: (id: string, status: TodoStatus) => void;
 }
 
 export default function TodoItem({
   todo,
-  onToggle,
   onDelete,
   onEdit,
+  onStatusChange,
 }: TodoItemProps) {
+  const getNextStatus = (current: TodoStatus): TodoStatus => {
+    switch (current) {
+      case "pending":
+        return "in_progress";
+      case "in_progress":
+        return "completed";
+      case "completed":
+        return "pending";
+    }
+  };
+
   return (
-    <div className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 group hover:shadow-sm transition-shadow">
-      <button
-        onClick={() => onToggle(todo.id)}
-        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-          todo.completed
-            ? "bg-blue-500 border-blue-500 text-white"
-            : "border-neutral-300 dark:border-neutral-600 hover:border-blue-500"
-        }`}
-      >
-        {todo.completed && (
+    <div className="p-3 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 group hover:shadow-sm transition-shadow">
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          type="text"
+          value={todo.text}
+          onChange={(e) => onEdit(todo.id, e.target.value)}
+          className={`flex-1 outline-none bg-transparent text-sm ${
+            todo.status === "completed"
+              ? "line-through text-neutral-400 dark:text-neutral-500"
+              : "text-neutral-800 dark:text-neutral-200"
+          }`}
+        />
+        <button
+          onClick={() => onDelete(todo.id)}
+          className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-all"
+        >
           <svg
-            className="w-3 h-3"
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -35,54 +52,27 @@ export default function TodoItem({
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={3}
-              d="M5 13l4 4L19 7"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
             />
           </svg>
-        )}
-      </button>
-
-      <span
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => {
-          const newText = e.currentTarget.textContent || "";
-          if (newText !== todo.text && newText.trim()) {
-            onEdit(todo.id, newText);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            e.currentTarget.blur();
-          }
-        }}
-        className={`flex-1 outline-none cursor-text ${
-          todo.completed
-            ? "line-through text-neutral-400 dark:text-neutral-500"
-            : "text-neutral-800 dark:text-neutral-200"
+        </button>
+      </div>
+      <button
+        onClick={() => onStatusChange(todo.id, getNextStatus(todo.status))}
+        className={`text-xs px-2 py-1 rounded-full transition-colors ${
+          todo.status === "pending"
+            ? "bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
+            : todo.status === "in_progress"
+            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
+            : "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300"
         }`}
       >
-        {todo.text}
-      </span>
-
-      <button
-        onClick={() => onDelete(todo.id)}
-        className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-all"
-      >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-          />
-        </svg>
+        {todo.status === "pending"
+          ? "대기 중"
+          : todo.status === "in_progress"
+          ? "진행 중"
+          : "완료"}
       </button>
     </div>
   );
