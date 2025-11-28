@@ -1,6 +1,8 @@
+export type TodoStatus = "pending" | "in_progress" | "completed";
+
 export interface Todo {
   id: string;
   text: string;
-  completed: boolean;
+  status: TodoStatus;
   createdAt: Date;
 }
