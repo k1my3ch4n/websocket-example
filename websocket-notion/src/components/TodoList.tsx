@@ -4,10 +4,14 @@ import { useState } from "react";
 import { Todo, TodoStatus } from "@/types/todo";
 import TodoItem from "./TodoItem";
 
-const COLUMNS: { status: TodoStatus; title: string; color: string }[] = [
-  { status: "pending", title: "대기 중", color: "bg-neutral-500" },
+const COLUMNS: {
+  status: TodoStatus;
+  title: string;
+  color: string;
+}[] = [
+  { status: "pending", title: "대기 중", color: "bg-amber-500" },
   { status: "in_progress", title: "진행 중", color: "bg-blue-500" },
-  { status: "completed", title: "완료", color: "bg-green-500" },
+  { status: "completed", title: "완료", color: "bg-emerald-500" },
 ];
 
 export default function TodoList() {
@@ -53,27 +57,33 @@ export default function TodoList() {
     todos.filter((todo) => todo.status === status);
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold text-neutral-800 dark:text-white mb-6">
-        Todo Board
-      </h1>
+    <div className="w-full max-w-7xl mx-auto px-4">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold text-stone-800 mb-2">
+          Todo Board
+        </h1>
+        <p className="text-stone-500">
+          작업을 관리하고 진행 상황을 추적하세요
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {COLUMNS.map((column) => (
           <div
             key={column.status}
-            className="bg-neutral-100 dark:bg-neutral-800/50 rounded-xl p-4"
+            className="bg-white border border-stone-200 rounded-2xl p-5 shadow-sm"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <div className={`w-3 h-3 rounded-full ${column.color}`} />
-              <h2 className="font-semibold text-neutral-700 dark:text-neutral-200">
+            <div className="flex items-center gap-3 mb-5 pb-3 border-b border-stone-200">
+              <div className={`w-4 h-4 rounded-full ${column.color}`} />
+              <h2 className="text-lg font-bold text-stone-700">
                 {column.title}
               </h2>
-              <span className="ml-auto text-sm text-neutral-500 dark:text-neutral-400">
+              <span className="ml-auto px-3 py-1 bg-stone-100 rounded-full text-sm font-semibold text-stone-600">
                 {getTodosByStatus(column.status).length}
               </span>
             </div>
-            <div className="space-y-2 min-h-[200px]">
+
+            <div className="space-y-3 min-h-[250px]">
               {getTodosByStatus(column.status).map((todo) => (
                 <TodoItem
                   key={todo.id}
@@ -84,8 +94,9 @@ export default function TodoList() {
                 />
               ))}
             </div>
+
             {addingStatus === column.status ? (
-              <div className="mt-2 p-2 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
+              <div className="mt-4 p-4 bg-white rounded-xl border-2 border-dashed border-stone-300 shadow-sm">
                 <input
                   type="text"
                   value={newTodoText}
@@ -94,21 +105,21 @@ export default function TodoList() {
                     if (e.key === "Enter") addTodo(column.status);
                     if (e.key === "Escape") cancelAdd();
                   }}
-                  placeholder="새 작업 입력..."
+                  placeholder="새 작업을 입력하세요..."
                   autoFocus
-                  className="w-full px-2 py-1 bg-transparent outline-none text-sm text-neutral-800 dark:text-white placeholder-neutral-400"
+                  className="w-full px-3 py-2 bg-stone-50 rounded-lg outline-none text-stone-800 placeholder-stone-400 border border-stone-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
                 />
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => addTodo(column.status)}
                     disabled={!newTodoText.trim()}
-                    className="flex-1 px-3 py-1 bg-blue-500 text-white text-sm rounded font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 px-4 py-2 bg-stone-800 text-white rounded-lg font-semibold hover:bg-stone-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    추가
+                    추가하기
                   </button>
                   <button
                     onClick={cancelAdd}
-                    className="px-3 py-1 text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                    className="px-4 py-2 text-stone-600 hover:bg-stone-100 rounded-lg font-medium transition-colors"
                   >
                     취소
                   </button>
@@ -117,10 +128,10 @@ export default function TodoList() {
             ) : (
               <button
                 onClick={() => setAddingStatus(column.status)}
-                className="mt-2 w-full py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors flex items-center justify-center gap-1"
+                className="mt-4 w-full py-3 text-stone-400 hover:text-stone-600 bg-stone-50 hover:bg-stone-100 border-2 border-dashed border-stone-200 hover:border-stone-300 rounded-xl transition-all flex items-center justify-center gap-2 font-medium"
               >
                 <svg
-                  className="w-4 h-4"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -132,7 +143,7 @@ export default function TodoList() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                추가
+                새 작업 추가
               </button>
             )}
           </div>

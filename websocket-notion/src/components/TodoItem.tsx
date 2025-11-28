@@ -26,22 +26,28 @@ export default function TodoItem({
     }
   };
 
+  const statusLabel = {
+    pending: "대기 중",
+    in_progress: "진행 중",
+    completed: "완료",
+  };
+
   return (
-    <div className="p-3 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 group hover:shadow-sm transition-shadow">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 group hover:shadow-md hover:border-stone-300 transition-all">
+      <div className="flex items-start gap-3">
         <input
           type="text"
           value={todo.text}
           onChange={(e) => onEdit(todo.id, e.target.value)}
-          className={`flex-1 outline-none bg-transparent text-sm ${
+          className={`flex-1 outline-none bg-transparent font-medium ${
             todo.status === "completed"
-              ? "line-through text-neutral-400 dark:text-neutral-500"
-              : "text-neutral-800 dark:text-neutral-200"
+              ? "line-through text-stone-400"
+              : "text-stone-700"
           }`}
         />
         <button
           onClick={() => onDelete(todo.id)}
-          className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
         >
           <svg
             className="w-4 h-4"
@@ -53,27 +59,19 @@ export default function TodoItem({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
             />
           </svg>
         </button>
       </div>
-      <button
-        onClick={() => onStatusChange(todo.id, getNextStatus(todo.status))}
-        className={`text-xs px-2 py-1 rounded-full transition-colors ${
-          todo.status === "pending"
-            ? "bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
-            : todo.status === "in_progress"
-            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
-            : "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300"
-        }`}
-      >
-        {todo.status === "pending"
-          ? "대기 중"
-          : todo.status === "in_progress"
-          ? "진행 중"
-          : "완료"}
-      </button>
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          onClick={() => onStatusChange(todo.id, getNextStatus(todo.status))}
+          className="text-xs px-3 py-1.5 rounded-lg font-semibold border bg-white text-stone-600 border-stone-200 transition-all hover:bg-stone-100"
+        >
+          {statusLabel[todo.status]}
+        </button>
+      </div>
     </div>
   );
 }
